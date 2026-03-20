@@ -5,3 +5,5 @@ utr.login()
 
 player = utr.get_player(247320)
 print(player["singlesUtr"])
+
+df.to_csv("utr_players.csv")
