@@ -1,0 +1,78 @@
+import csv
+import random
+
+# ------------------------------
+# 1. Define Elo-style UTR functions
+# ------------------------------
+def expected_result(player_utr, opponent_utr):
+    """Probability of player winning against opponent"""
+    return 1 / (1 + 10 ** ((opponent_utr - player_utr) / 2))
+
+def update_utr(player_utr, opponent_utr, games_won, games_lost):
+    """Update UTR after a match"""
+    expected = expected_result(player_utr, opponent_utr)
+    actual = 1 if games_won > games_lost else 0
+
+    # margin of victory
+    margin = (games_won - games_lost) / (games_won + games_lost) if (games_won + games_lost) > 0 else 0
+    margin_factor = 1 + margin
+
+    K = 0.3  # sensitivity factor
+    rating_change = K * (actual - expected) * margin_factor
+
+    new_utr = player_utr + rating_change
+    return round(new_utr, 2)
+
+# ------------------------------
+# 2. Generate Fake Match CSV
+# ------------------------------
+players = ["Alice", "Bob", "Charlie", "Dana"]
+num_matches = 30
+
+with open("sample_matches.csv", "w", newline="") as file:
+    writer = csv.writer(file)
+    writer.writerow(["player","opponent","games_won","games_lost","player_utr","opponent_utr"])
+    
+    for _ in range(num_matches):
+        player = random.choice(players)
+        opponent = random.choice([p for p in players if p != player])
+        games_won = random.randint(0, 6)
+        games_lost = random.randint(0, 6)
+        player_utr = round(random.uniform(4.0, 10.0), 2)
+        opponent_utr = round(random.uniform(4.0, 10.0), 2)
+        writer.writerow([player, opponent, games_won, games_lost, player_utr, opponent_utr])
+
+print("Sample CSV 'sample_matches.csv' created!")
+
+# ------------------------------
+# 3. Read CSV and Simulate UTR Updates
+# ------------------------------
+utr_table = {}  # store current UTR for each player
+
+with open("sample_matches.csv", "r") as file:
+    reader = csv.DictReader(file)
+    
+    print("\nSimulating Matches...\n")
+    for row in reader:
+        player = row["player"]
+        opponent = row["opponent"]
+        games_won = int(row["games_won"])
+        games_lost = int(row["games_lost"])
+        player_utr = float(row["player_utr"])
+        opponent_utr = float(row["opponent_utr"])
+        
+        # Use latest UTR if player already played previous matches
+        player_utr = utr_table.get(player, player_utr)
+        
+        # Update UTR
+        new_utr = update_utr(player_utr, opponent_utr, games_won, games_lost)
+        utr_table[player] = new_utr
+        
+        print(f"{player} vs {opponent} | Score: {games_won}-{games_lost} | Old UTR: {player_utr} -> New UTR: {new_utr}")
+
+# ------------------------------
+# 4. Final UTR Rankings
+# ------------------------------
+print("\nFinal UTRs after all matches:")
+for player, utr in utr_table.items():
+    print(f"{player}: {utr}")
